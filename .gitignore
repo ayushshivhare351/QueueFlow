@@ -1,0 +1,23 @@
+# Node
+node_modules/
+
+# Environment
+.env
+.env.*
+
+# Build
+dist/
+
+# Logs
+*.log
+
+# Prisma
+src/generated/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
