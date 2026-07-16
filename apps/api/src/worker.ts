@@ -24,7 +24,7 @@ async function startWorker() {
                 console.log(`Job ${jobId} not found. Skipping...`);
                 continue;
             }
-            
+
             await prisma.job.update({
                 where: {
                     id: jobId,
@@ -53,15 +53,47 @@ async function startWorker() {
 
         } catch (error) {
             // Handle this one job's failure
-            await prisma.job.update({
+            const updatedJob = await prisma.job.update({
                 where: {
                     id: jobId,
                 },
                 data: {
-                    status: "FAILED",
+                    retryCount: {
+                        increment: 1
+                    },
                 },
             });
-            console.error("Job failed:", error);
+
+            const MAX_RETRIES = 3;
+
+            if (updatedJob.retryCount < MAX_RETRIES) {
+                console.log("Retrying job...");
+
+                await prisma.job.update({
+                    where: {
+                        id: jobId,
+                    },
+                    data: {
+                        status: "QUEUED",
+                    },
+                });
+
+                await redis.lPush("queue:default", jobId);
+            }
+
+            else {
+                    await prisma.job.update({
+                        where: {
+                            id: jobId,
+                        },
+                        data: {
+                            status: "FAILED",
+                        },
+                    });
+
+                    console.log("Job permanently failed.");
+                }
+
 
         }
 
