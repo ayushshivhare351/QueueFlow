@@ -10,39 +10,63 @@ async function startWorker() {
         const result = await redis.brPop("queue:default", 0);
         const jobId = result.element;
 
-        console.log("Received Job:", jobId);
+        try {
+            // Everything related to this one job
+            console.log("Received Job:", jobId);
 
-        const job = await prisma.job.findUnique({
-            where: {
-                id: jobId,
-            },
-        });
+            const job = await prisma.job.findUnique({
+                where: {
+                    id: jobId,
+                },
+            });
 
-        await prisma.job.update({
-            where: {
-                id: jobId,
-            },
-            data: {
-                status: "PROCESSING",
-            },
-        });
+            if (!job) {
+                console.log(`Job ${jobId} not found. Skipping...`);
+                continue;
+            }
+            
+            await prisma.job.update({
+                where: {
+                    id: jobId,
+                },
+                data: {
+                    status: "PROCESSING",
+                },
+            });
 
-        console.log("Job is processing...");
+            console.log("Job is processing...");
+            // throw new Error("Testing failure");
+            await sleep(3000);
 
-        await sleep(3000);
+            await prisma.job.update({
+                where: {
+                    id: jobId,
+                },
+                data: {
+                    status: "COMPLETED",
+                },
+            });
 
-        await prisma.job.update({
-            where: {
-                id: jobId,
-            },
-            data: {
-                status: "COMPLETED",
-            },
-        });
+            console.log("Completed!");
 
-        console.log("Completed!");
+            console.log(job);
 
-        console.log(job);
+        } catch (error) {
+            // Handle this one job's failure
+            await prisma.job.update({
+                where: {
+                    id: jobId,
+                },
+                data: {
+                    status: "FAILED",
+                },
+            });
+            console.error("Job failed:", error);
+
+        }
+
+
+
     }
 }
 
