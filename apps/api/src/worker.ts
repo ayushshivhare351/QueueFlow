@@ -2,12 +2,16 @@ import "dotenv/config";
 import { redis } from "./lib/redis";
 import { prisma } from "./lib/prisma";
 import { sleep } from "./utils/sleep";
+import { QUEUES } from "../config/queues";
 
 async function startWorker() {
     console.log("👷 Worker started...");
 
     while (true) {
-        const result = await redis.brPop("queue:default", 0);
+        const result = await redis.brPop(
+    [QUEUES.HIGH, QUEUES.MEDIUM, QUEUES.LOW],
+    0
+);
         const jobId = result.element;
 
         try {
@@ -35,7 +39,7 @@ async function startWorker() {
             });
 
             console.log("Job is processing...");
-            throw new Error("Testing failure");
+            // throw new Error("Testing failure");
             await sleep(3000);
 
             await prisma.job.update({
