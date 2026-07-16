@@ -35,7 +35,7 @@ async function startWorker() {
             });
 
             console.log("Job is processing...");
-            // throw new Error("Testing failure");
+            throw new Error("Testing failure");
             await sleep(3000);
 
             await prisma.job.update({
@@ -82,17 +82,19 @@ async function startWorker() {
             }
 
             else {
-                    await prisma.job.update({
-                        where: {
-                            id: jobId,
-                        },
-                        data: {
-                            status: "FAILED",
-                        },
-                    });
+                await prisma.job.update({
+                    where: {
+                        id: jobId,
+                    },
+                    data: {
+                        status: "FAILED",
+                    },
+                });
 
-                    console.log("Job permanently failed.");
-                }
+                await redis.lPush("queue:dead", jobId);
+
+                console.log("Moved job to Dead Letter Queue");
+            }
 
 
         }
