@@ -2,7 +2,7 @@ import "dotenv/config";
 import { redis } from "./lib/redis";
 import { prisma } from "./lib/prisma";
 import { sleep } from "./utils/sleep";
-import { QUEUES } from "../config/queues";
+import { QUEUES } from "./config/queues";
 
 async function startWorker() {
     console.log("👷 Worker started...");

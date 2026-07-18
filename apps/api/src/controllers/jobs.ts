@@ -9,10 +9,12 @@ export async function createJob(req: Request, res: Response) {
             type,
             payload,
             priority = "MEDIUM",
+            delay = 0,
         }: {
             type: string;
             payload: unknown;
             priority?: QueuePriority;
+            delay?: number;
         } = req.body;
 
         console.log("Saving job...");
@@ -23,20 +25,30 @@ export async function createJob(req: Request, res: Response) {
             });
         }
 
+        const status = delay > 0 ? "SCHEDULED" : "QUEUED";
+
+        const runAt =
+            delay > 0
+                ? new Date(Date.now() + delay)
+                : null;
+
         const job = await prisma.job.create({
             data: {
                 type,
                 payload,
                 priority,
-                status: "QUEUED",
+                status,
+                runAt,
             },
         });
 
         console.log("Job saved:", job.id);
 
-        await redis.lPush(QUEUES[priority], job.id);
+        if (status === "QUEUED") {
+            await redis.lPush(QUEUES[priority], job.id);
 
-        console.log("Pushed to Redis");
+            console.log("Pushed to Redis");
+        }
 
         res.status(201).json(job);
 
